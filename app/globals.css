@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Vestorly brand tokens */
+@theme {
+  --color-primary: #1F7A4D;
+  --color-accent: #4CAF50;
+  --color-accentSoft: #DFF5E3;
+  --color-soft: #E9ECEF;
+  --color-text: #444444;
+  --color-muted: #6B7280;
+}
