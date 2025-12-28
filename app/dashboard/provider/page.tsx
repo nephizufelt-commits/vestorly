@@ -142,13 +142,12 @@ export default function ProviderDashboardPage() {
             Provider Dashboard
           </h1>
 
-   <div className="bg-green-700 text-white p-4">
-  Built-in green works
+   <div className="p-6 space-y-4">
+  <div className="bg-red-500 text-white p-4">Red</div>
+  <div className="bg-green-700 text-white p-4">Green</div>
+  <div className="border p-4">Border</div>
 </div>
 
-<div className="bg-primary text-white p-4 mt-2">
-  Custom green works
-</div>
 
 
           <p className="mt-1 text-sm text-muted">
