@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseServer } from "@/lib/supabase-server"
 import crypto from 'crypto'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-)
-
-// 🔐 Timing-safe comparison
+// Timing-safe comparison
 function safeEqual(a: string, b: string) {
   const bufA = Buffer.from(a)
   const bufB = Buffer.from(b)
@@ -16,7 +10,7 @@ function safeEqual(a: string, b: string) {
   return crypto.timingSafeEqual(bufA, bufB)
 }
 
-// 🔐 Verify DocuSign signature
+// Verify DocuSign signature
 function verifySignature(rawBody: string, signatureHeader: string | null) {
   if (!signatureHeader) return false
 
@@ -35,11 +29,28 @@ function verifySignature(rawBody: string, signatureHeader: string | null) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY missing at runtime")
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL missing")
+  }
+
+  const supabaseAdmin = supabaseServer(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  )
+
   try {
-    // 1️⃣ Read raw body FIRST
+
+    // rest of your code...
+
+    // Read raw body FIRST
     const rawBody = await req.text()
 
-    // 2️⃣ Verify signature BEFORE parsing JSON
+    // Verify signature BEFORE parsing JSON
     const signatureHeader =
       req.headers.get('x-docusign-signature')
 
@@ -52,7 +63,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3️⃣ Parse JSON only after verification
+    // Parse JSON only after verification
     const payload = JSON.parse(rawBody)
 
     const {
@@ -75,7 +86,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 4️⃣ Fetch grant (read-only)
+    // Fetch grant (read-only)
     const { data: grant, error } =
       await supabaseAdmin
         .from('equity_grants')
@@ -90,12 +101,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 5️⃣ Idempotency
+    // Idempotency
     if (grant.status === 'signed') {
       return NextResponse.json({ ok: true })
     }
 
-    // 6️⃣ Provider guard
+    // Provider guard
     if (grant.agreement_provider !== 'docusign') {
       return NextResponse.json(
         { error: 'Provider mismatch' },
@@ -103,7 +114,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 7️⃣ Delegate signing to domain logic
+    // Delegate signing to domain logic
     const { error: signError } =
       await supabaseAdmin.rpc('sign_grant', {
         p_grant_id: grantId
