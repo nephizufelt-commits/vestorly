@@ -1,15 +1,16 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 
-export function createSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
+export function createSupabaseAdmin(
+  supabaseUrl: string | undefined,
+  serviceRoleKey: string | undefined,
+  options?: Parameters<typeof createClient>[2]
+): SupabaseClient {
   if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL is required")
+    throw new Error("createSupabaseAdmin: supabaseUrl missing")
   }
 
   if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required")
+    throw new Error("createSupabaseAdmin: serviceRoleKey missing")
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {
@@ -17,5 +18,6 @@ export function createSupabaseAdmin() {
       persistSession: false,
       autoRefreshToken: false,
     },
+    ...options,
   })
 }
