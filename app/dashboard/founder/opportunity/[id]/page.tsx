@@ -55,7 +55,6 @@ export default function ManageOpportunityPage() {
         return
       }
 
-      // Load opportunity
       const { data: opp, error: oppErr } = await supabase
         .from("opportunities")
         .select("*")
@@ -69,7 +68,6 @@ export default function ManageOpportunityPage() {
       }
       setOpportunity(opp)
 
-      // Load applications
       const { data: apps, error: appsErr } = await supabase
         .from("applications")
         .select("id,opportunity_id,provider_user_id,proposal,proposed_terms,status,created_at")
@@ -85,19 +83,12 @@ export default function ManageOpportunityPage() {
       const appsData = (apps ?? []) as Application[]
       setApplications(appsData)
 
-      // Load provider profiles for display
       const providerIds = Array.from(new Set(appsData.map((a) => a.provider_user_id)))
       if (providerIds.length) {
-        const { data: profs, error: profErr } = await supabase
+        const { data: profs } = await supabase
           .from("profiles")
           .select("id,full_name,headline,skills,portfolio_url,linkedin_url,kyc_status")
           .in("id", providerIds)
-
-        if (profErr) {
-          setMessage(profErr.message)
-          setLoading(false)
-          return
-        }
 
         const map: Record<string, Profile> = {}
         for (const p of profs ?? []) map[p.id] = p as Profile
@@ -109,164 +100,206 @@ export default function ManageOpportunityPage() {
   }, [oppId])
 
   async function acceptApplication(appId: string) {
-  setMessage(null)
-  try {
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData.session) throw new Error("Not signed in.")
-    const founderId = sessionData.session.user.id
+    setMessage(null)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session) throw new Error("Not signed in.")
+      const founderId = sessionData.session.user.id
 
-    if (!opportunity?.id || !opportunity?.company_id) throw new Error("Opportunity not loaded.")
+      if (!opportunity?.id || !opportunity?.company_id) {
+        throw new Error("Opportunity not loaded.")
+      }
 
-    // Load the chosen application (need provider id)
-    const chosen = applications.find((a) => a.id === appId)
-    if (!chosen) throw new Error("Application not found in current list.")
+      const chosen = applications.find((a) => a.id === appId)
+      if (!chosen) throw new Error("Application not found.")
 
-    // Accept selected
-    const { error: acceptErr } = await supabase
-      .from("applications")
-      .update({ status: "accepted" })
-      .eq("id", appId)
-    if (acceptErr) throw acceptErr
+      await supabase.from("applications").update({ status: "accepted" }).eq("id", appId)
+      await supabase
+        .from("applications")
+        .update({ status: "rejected" })
+        .eq("opportunity_id", oppId!)
+        .neq("id", appId)
 
-    // Reject others (MVP behavior)
-    const { error: rejectErr } = await supabase
-      .from("applications")
-      .update({ status: "rejected" })
-      .eq("opportunity_id", oppId!)
-      .neq("id", appId)
-    if (rejectErr) throw rejectErr
+      const { data: grant, error: grantErr } = await supabase
+        .from("equity_grants")
+        .insert({
+          company_id: opportunity.company_id,
+          opportunity_id: opportunity.id,
+          recipient_user_id: chosen.provider_user_id,
+          granted_by_user_id: founderId,
+          status: "draft",
+          equity_amount: opportunity.equity_amount ?? null,
+          equity_unit: opportunity.equity_unit || null,
+          vesting_terms: "TBD",
+          agreement_provider: "docusign",
+          agreement_url: null,
+        })
+        .select()
+        .single()
 
-    // Create draft equity grant (placeholder agreement)
-    const { data: grant, error: grantErr } = await supabase
-  .from("equity_grants")
-  .insert({
-    company_id: opportunity.company_id,
-    opportunity_id: opportunity.id,
-    recipient_user_id: chosen.provider_user_id, // provider
-    granted_by_user_id: founderId,               // founder
+      if (grantErr) throw grantErr
 
-    status: "draft",                             // your table uses "status"
-    equity_amount: opportunity.equity_amount ?? null,
-    equity_unit: opportunity.equity_unit || null,
-    vesting_terms: "TBD",
-
-    agreement_provider: "docusign",
-    agreement_url: null,
-
-    // optional defaults (leave null for MVP)
-    vesting_start_date: null,
-    vesting_months: null,
-    cliff_months: null,
-  })
-  .select()
-  .single()
-
-if (grantErr) throw grantErr
-
-
-    setApplications((prev) =>
-      prev.map((a) =>
-        a.id === appId ? { ...a, status: "accepted" } : { ...a, status: "rejected" }
+      setApplications((prev) =>
+        prev.map((a) =>
+          a.id === appId ? { ...a, status: "accepted" } : { ...a, status: "rejected" }
+        )
       )
-    )
 
-    setMessage(`Accepted. Draft equity grant created: ${grant.id}`)
-  } catch (err: any) {
-    setMessage(err?.message ?? "Something went wrong.")
+      setMessage(`Accepted. Draft equity grant created.`)
+    } catch (err: any) {
+      setMessage(err?.message ?? "Something went wrong.")
+    }
   }
-}
 
-
-  if (loading) return <div className="text-sm text-gray-600">Loading…</div>
+  if (loading) return <div className="text-sm text-muted">Loading…</div>
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">Manage Opportunity</h1>
-          <div className="text-sm text-gray-600">{opportunity?.title ?? ""}</div>
-        </div>
-        <Link className="underline text-sm font-medium" href="/dashboard/founder">
-          Back to dashboard
-        </Link>
-      </div>
+    <div className="bg-soft/40">
+      <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-text">
+              Manage Opportunity
+            </h1>
+            <p className="text-sm text-muted">{opportunity?.title}</p>
+          </div>
 
-      {message && <div className="text-sm bg-gray-50 border rounded p-3">{message}</div>}
-
-      <div className="bg-white border rounded-lg p-6 space-y-2">
-        <div className="font-semibold">Description</div>
-        <div className="text-sm text-gray-700 whitespace-pre-wrap">{opportunity?.description}</div>
-      </div>
-
-      <div className="bg-white border rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Applicants</h2>
-          <span className="text-sm text-gray-600">{applications.length} total</span>
+          <Link
+            href="/dashboard/founder"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Back
+          </Link>
         </div>
 
-        {applications.length === 0 ? (
-          <p className="text-sm text-gray-600">No applications yet.</p>
-        ) : (
-          <div className="divide-y">
-            {applications.map((a) => {
-              const p = profilesById[a.provider_user_id]
-              return (
-                <div key={a.id} className="py-5 space-y-3">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="space-y-1">
-                      <div className="font-semibold">
-                        {p?.full_name ?? "Provider"}{" "}
-                        <span className="text-sm text-gray-600">· {a.status}</span>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {p?.headline ?? ""}
-                        {p?.kyc_status ? ` · KYC: ${p.kyc_status}` : ""}
-                      </div>
-                      {p?.skills?.length ? (
-                        <div className="text-sm text-gray-600">
-                          Skills: {p.skills.slice(0, 8).join(", ")}
-                          {p.skills.length > 8 ? "…" : ""}
-                        </div>
-                      ) : null}
-                      <div className="text-sm">
-                        {p?.portfolio_url ? (
-                          <a className="underline mr-3" href={p.portfolio_url} target="_blank">
-                            Portfolio
-                          </a>
-                        ) : null}
-                        {p?.linkedin_url ? (
-                          <a className="underline" href={p.linkedin_url} target="_blank">
-                            LinkedIn
-                          </a>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => acceptApplication(a.id)}
-                      disabled={a.status === "accepted"}
-                      className="bg-black text-white rounded px-4 py-2 text-sm font-medium disabled:opacity-60"
-                    >
-                      {a.status === "accepted" ? "Accepted" : "Accept"}
-                    </button>
-                  </div>
-
-                  <div className="bg-gray-50 border rounded p-4">
-                    <div className="text-sm font-medium mb-1">Proposal</div>
-                    <div className="text-sm text-gray-700 whitespace-pre-wrap">{a.proposal}</div>
-
-                    {a.proposed_terms ? (
-                      <>
-                        <div className="text-sm font-medium mt-3 mb-1">Proposed terms</div>
-                        <div className="text-sm text-gray-700">{a.proposed_terms}</div>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              )
-            })}
+        {message && (
+          <div className="rounded-lg border border-soft bg-soft p-4 text-sm text-text">
+            {message}
           </div>
         )}
+
+        {/* Description */}
+        <section className="rounded-lg border border-soft bg-white p-6 space-y-2">
+          <h2 className="text-sm font-semibold text-text">Description</h2>
+          <p className="text-sm text-muted whitespace-pre-wrap">
+            {opportunity?.description}
+          </p>
+        </section>
+
+        {/* Applicants */}
+        <section className="rounded-xl border border-soft bg-white p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-text">
+              Applicants
+            </h2>
+            <span className="text-sm text-muted">
+              {applications.length} total
+            </span>
+          </div>
+
+          {applications.length === 0 ? (
+            <p className="text-sm text-muted">No applications yet.</p>
+          ) : (
+            <div className="divide-y">
+              {applications.map((a) => {
+                const p = profilesById[a.provider_user_id]
+                const isAccepted = a.status === "accepted"
+
+                return (
+                  <div
+                    key={a.id}
+                    className={`py-6 space-y-4 transition ${
+                      isAccepted ? "bg-accentSoft/30" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-text">
+                          {p?.full_name ?? "Provider"}{" "}
+                          <span className="text-xs uppercase tracking-wide text-muted">
+                            · {a.status}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-muted">
+                          {p?.headline}
+                          {p?.kyc_status ? ` · KYC: ${p.kyc_status}` : ""}
+                        </div>
+
+                        {p?.skills?.length ? (
+                          <div className="text-sm text-muted">
+                            Skills: {p.skills.slice(0, 8).join(", ")}
+                            {p.skills.length > 8 ? "…" : ""}
+                          </div>
+                        ) : null}
+
+                        <div className="text-sm">
+                          {p?.portfolio_url && (
+                            <a
+                              className="text-primary underline mr-4"
+                              href={p.portfolio_url}
+                              target="_blank"
+                            >
+                              Portfolio
+                            </a>
+                          )}
+                          {p?.linkedin_url && (
+                            <a
+                              className="text-primary underline"
+                              href={p.linkedin_url}
+                              target="_blank"
+                            >
+                              LinkedIn
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => acceptApplication(a.id)}
+                        disabled={isAccepted}
+                        className="
+                          rounded-md
+                          bg-primary
+                          px-4 py-2
+                          text-sm font-semibold text-white
+                          hover:opacity-90
+                          disabled:opacity-50
+                        "
+                      >
+                        {isAccepted ? "Accepted" : "Accept"}
+                      </button>
+                    </div>
+
+                    {/* Proposal */}
+                    <div className="rounded-lg border border-soft bg-soft/40 p-4 space-y-3">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
+                          Proposal
+                        </div>
+                        <p className="text-sm text-text whitespace-pre-wrap">
+                          {a.proposal}
+                        </p>
+                      </div>
+
+                      {a.proposed_terms && (
+                        <div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
+                            Proposed terms
+                          </div>
+                          <p className="text-sm text-text">
+                            {a.proposed_terms}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )

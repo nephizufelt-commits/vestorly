@@ -33,7 +33,7 @@ export default function OpportunityDetailPage() {
       }
 
       if (!oppId) {
-        setMessage("Missing opportunity id in route. (URL should look like /marketplace/<id>)")
+        setMessage("Missing opportunity id in route.")
         setLoading(false)
         return
       }
@@ -91,7 +91,7 @@ export default function OpportunityDetailPage() {
 
       if (error) throw error
 
-      setMessage("Application submitted.")
+      setMessage("Application submitted successfully.")
       setProposal("")
       setProposedTerms("")
     } catch (err: any) {
@@ -101,61 +101,119 @@ export default function OpportunityDetailPage() {
     }
   }
 
-  if (loading) return <div className="text-sm text-gray-600">Loading…</div>
+  if (loading) return <div className="text-sm text-muted">Loading…</div>
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {message && <div className="text-sm bg-gray-50 border rounded p-3">{message}</div>}
+    <div className="bg-soft/40">
+      <div className="max-w-4xl mx-auto px-6 py-10 space-y-10">
+        {message && (
+          <div className="rounded-lg border border-soft bg-soft p-4 text-sm text-text">
+            {message}
+          </div>
+        )}
 
-      <div className="bg-white border rounded-lg p-6 space-y-2">
-        <h1 className="text-2xl font-bold">{opportunity?.title ?? "Opportunity"}</h1>
-        <div className="text-sm text-gray-600">
-          {company?.name ?? "Company"} {company?.industry ? `· ${company.industry}` : ""}
-          {company?.website ? ` · ${company.website}` : ""}
-        </div>
+        {/* Opportunity */}
+        <section className="rounded-xl border border-soft bg-white p-8 space-y-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-text">
+              {opportunity?.title ?? "Opportunity"}
+            </h1>
+            <div className="mt-1 text-sm text-muted">
+              {company?.name ?? "Company"}
+              {company?.industry ? ` · ${company.industry}` : ""}
+              {company?.website ? ` · ${company.website}` : ""}
+            </div>
+          </div>
 
-        <div className="text-sm text-gray-700 whitespace-pre-wrap pt-2">
-          {opportunity?.description}
-        </div>
+          <div className="pt-2 text-sm text-text whitespace-pre-wrap">
+            {opportunity?.description}
+          </div>
 
-        <div className="text-sm text-gray-600 pt-2">
-          {opportunity?.equity_amount !== null && opportunity?.equity_unit
-            ? `Equity: ${opportunity.equity_amount} ${opportunity.equity_unit}`
-            : "Equity: negotiable"}
-          {opportunity?.equity_type ? ` · Type: ${opportunity.equity_type}` : ""}
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-4 pt-3">
+            <div className="rounded-md bg-accentSoft px-3 py-1 text-sm text-text">
+              {opportunity?.equity_amount !== null && opportunity?.equity_unit
+                ? `${opportunity.equity_amount} ${opportunity.equity_unit}`
+                : "Equity negotiable"}
+            </div>
+            {opportunity?.equity_type && (
+              <div className="rounded-md bg-soft px-3 py-1 text-sm text-muted">
+                {opportunity.equity_type}
+              </div>
+            )}
+          </div>
+        </section>
 
-      <div className="bg-white border rounded-lg p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Apply</h2>
+        {/* Apply */}
+        <section className="rounded-xl border border-soft bg-white p-8 space-y-6">
+          <h2 className="text-lg font-semibold text-text">
+            Apply for this role
+          </h2>
 
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Proposal *</span>
-          <textarea
-            className="w-full border rounded px-3 py-2 min-h-[140px]"
-            value={proposal}
-            onChange={(e) => setProposal(e.target.value)}
-            placeholder="Explain what you’ll deliver, timeline, and why you’re a fit."
-          />
-        </label>
+          <div className="text-sm text-muted">
+            Your proposal is shared directly with the founder. Be specific about
+            scope, timeline, and why you’re a good fit.
+          </div>
 
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Proposed terms (optional)</span>
-          <input
-            className="w-full border rounded px-3 py-2"
-            value={proposedTerms}
-            onChange={(e) => setProposedTerms(e.target.value)}
-            placeholder="e.g., 0.25% vested over 12 months, milestone-based"
-          />
-        </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-text">
+              Proposal *
+            </span>
+            <textarea
+              className="
+                w-full
+                rounded-md
+                border border-soft
+                px-4 py-3
+                min-h-[160px]
+                text-sm
+                focus:outline-none
+                focus:ring-2
+                focus:ring-primary/40
+              "
+              value={proposal}
+              onChange={(e) => setProposal(e.target.value)}
+              placeholder="What will you deliver? Timeline? Prior experience?"
+            />
+          </label>
 
-        <button
-          onClick={apply}
-          disabled={submitting}
-          className="bg-black text-white rounded px-4 py-2 font-medium disabled:opacity-60"
-        >
-          {submitting ? "Submitting..." : "Submit Application"}
-        </button>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-text">
+              Proposed terms (optional)
+            </span>
+            <input
+              className="
+                w-full
+                rounded-md
+                border border-soft
+                px-4 py-2
+                text-sm
+                focus:outline-none
+                focus:ring-2
+                focus:ring-primary/40
+              "
+              value={proposedTerms}
+              onChange={(e) => setProposedTerms(e.target.value)}
+              placeholder="e.g. 0.25% vested over 12 months"
+            />
+          </label>
+
+          <div className="pt-2">
+            <button
+              onClick={apply}
+              disabled={submitting}
+              className="
+                rounded-md
+                bg-primary
+                px-5 py-2.5
+                text-sm font-semibold text-white
+                hover:opacity-90
+                disabled:opacity-50
+              "
+            >
+              {submitting ? "Submitting…" : "Submit application"}
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   )

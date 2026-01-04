@@ -36,17 +36,17 @@ export default function MarketplacePage() {
       setLoading(true)
       setMessage(null)
 
-      // For MVP: require sign-in to view marketplace to avoid public RLS complexity
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) {
         window.location.href = "/signin"
         return
       }
 
-      // Load open opportunities
       const { data: o, error: oErr } = await supabase
         .from("opportunities")
-        .select("id,company_id,title,description,status,equity_type,equity_amount,equity_unit,created_at")
+        .select(
+          "id,company_id,title,description,status,equity_type,equity_amount,equity_unit,created_at"
+        )
         .eq("status", "open")
         .order("created_at", { ascending: false })
 
@@ -59,7 +59,6 @@ export default function MarketplacePage() {
       const oppsData = (o ?? []) as Opportunity[]
       setOpps(oppsData)
 
-      // Fetch companies for display
       const companyIds = Array.from(new Set(oppsData.map((x) => x.company_id)))
       if (companyIds.length) {
         const { data: comps, error: cErr } = await supabase
@@ -96,70 +95,109 @@ export default function MarketplacePage() {
     })
   }, [opps, query, companiesById])
 
-  if (loading) return <div className="text-sm text-gray-600">Loading…</div>
+  if (loading) return <div className="text-sm text-muted">Loading…</div>
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">Marketplace</h1>
-          <p className="text-sm text-gray-600">Browse open equity opportunities.</p>
+    <div className="bg-soft/40">
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-text">
+              Marketplace
+            </h1>
+            <p className="text-sm text-muted">
+              Browse open equity opportunities and apply directly.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/provider"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Provider Dashboard
+          </Link>
         </div>
 
-        <Link
-          href="/dashboard/provider"
-          className="text-sm font-medium px-4 py-2 rounded border bg-white hover:bg-gray-50"
-        >
-          Provider Dashboard
-        </Link>
-      </div>
+        {message && (
+          <div className="rounded-lg border border-soft bg-soft p-4 text-sm text-text">
+            {message}
+          </div>
+        )}
 
-      {message && <div className="text-sm bg-gray-50 border rounded p-3">{message}</div>}
+        {/* Search */}
+        <div className="rounded-xl border border-soft bg-white p-4 flex items-center gap-4">
+          <input
+            className="w-full rounded-md border border-soft px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            placeholder="Search roles, companies, or industries…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="text-sm text-muted whitespace-nowrap">
+            {filtered.length} results
+          </div>
+        </div>
 
-      <div className="bg-white border rounded-lg p-4 flex items-center gap-3">
-        <input
-          className="w-full border rounded px-3 py-2"
-          placeholder="Search roles, companies, industries…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <div className="text-sm text-gray-600 whitespace-nowrap">{filtered.length} results</div>
-      </div>
+        {/* Results */}
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted">No opportunities found.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {filtered.map((o) => {
+              const c = companiesById[o.company_id]
+              return (
+                <div
+                  key={o.id}
+                  className="
+                    group
+                    rounded-xl
+                    border border-soft
+                    bg-white
+                    p-6
+                    space-y-4
+                    transition
+                    hover:shadow-md
+                  "
+                >
+                  <div className="space-y-1">
+                    <div className="text-lg font-semibold text-text">
+                      {o.title}
+                    </div>
+                    <div className="text-sm text-muted">
+                      {c?.name ?? "Company"}
+                      {c?.industry ? ` · ${c.industry}` : ""}
+                    </div>
+                  </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-sm text-gray-600">No opportunities found.</p>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {filtered.map((o) => {
-            const c = companiesById[o.company_id]
-            return (
-              <div key={o.id} className="bg-white border rounded-lg p-6 space-y-3">
-                <div className="space-y-1">
-                  <div className="text-lg font-semibold">{o.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {c?.name ?? "Company"} {c?.industry ? `· ${c.industry}` : ""}
+                  <p className="text-sm text-text/80 line-clamp-3">
+                    {o.description}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-sm text-muted">
+                      {o.equity_amount !== null && o.equity_unit
+                        ? `${o.equity_amount} ${o.equity_unit}`
+                        : "Equity negotiable"}
+                      {o.equity_type ? ` · ${o.equity_type}` : ""}
+                    </div>
+
+                    <Link
+                      href={`/marketplace/${o.id}`}
+                      className="
+                        text-sm font-semibold
+                        text-primary
+                        group-hover:underline
+                      "
+                    >
+                      View & Apply →
+                    </Link>
                   </div>
                 </div>
-
-                <p className="text-sm text-gray-700 line-clamp-3">{o.description}</p>
-
-                <div className="text-sm text-gray-600">
-                  {o.equity_amount !== null && o.equity_unit
-                    ? `Equity: ${o.equity_amount} ${o.equity_unit}`
-                    : "Equity: negotiable"}
-                  {o.equity_type ? ` · Type: ${o.equity_type}` : ""}
-                </div>
-
-                <div className="pt-2">
-                  <Link className="underline text-sm font-medium" href={`/marketplace/${o.id}`}>
-                    View & Apply
-                  </Link>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

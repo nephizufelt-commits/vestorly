@@ -36,7 +36,6 @@ export default function FounderDashboardPage() {
 
   const [opps, setOpps] = useState<Opportunity[]>([])
 
-  // New opportunity form
   const [title, setTitle] = useState("")
   const [equityType, setEquityType] = useState("Advisory")
   const [equityAmount, setEquityAmount] = useState("")
@@ -54,9 +53,6 @@ export default function FounderDashboardPage() {
         return
       }
 
-      // Load companies for this founder:
-      // simplest: companies created_by me
-      // (later: show companies where I’m a member)
       const userId = sessionData.session.user.id
       const { data: comps, error: compsErr } = await supabase
         .from("companies")
@@ -71,8 +67,7 @@ export default function FounderDashboardPage() {
       }
 
       setCompanies(comps ?? [])
-      const firstId = (comps ?? [])[0]?.id
-      setSelectedCompanyId(firstId || "")
+      setSelectedCompanyId((comps ?? [])[0]?.id || "")
       setLoading(false)
     })()
   }, [])
@@ -143,39 +138,52 @@ export default function FounderDashboardPage() {
     }
   }
 
-  if (loading) return <div className="text-sm text-gray-600">Loading…</div>
+  if (loading) return <div className="text-sm text-muted">Loading…</div>
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">Founder Dashboard</h1>
-          <p className="text-sm text-gray-600">
-            Create opportunities and manage equity-based hires.
-          </p>
+    <div className="bg-soft/40">
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-12">
+        {/* Hero */}
+        <div className="rounded-xl bg-accentSoft p-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-primary">
+              Founder Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-text">
+              Build your team using equity — not just cash.
+            </p>
+          </div>
+
+          <Link
+            href="/"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            View marketplace
+          </Link>
         </div>
 
-        <Link
-          href="/"
-          className="text-sm font-medium px-4 py-2 rounded border bg-white hover:bg-gray-50"
-        >
-          View marketplace
-        </Link>
-      </div>
+        {message && (
+          <div className="rounded-lg border border-soft bg-soft p-4 text-sm text-text">
+            {message}
+          </div>
+        )}
 
-      {message && <div className="text-sm bg-gray-50 border rounded p-3">{message}</div>}
+        {/* Company Context */}
+        <section className="rounded-lg border border-soft bg-white p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-text">
+              Company Context
+            </h2>
+            {selectedCompany && (
+              <span className="text-xs uppercase tracking-wide text-muted">
+                Active
+              </span>
+            )}
+          </div>
 
-      <section className="bg-white border rounded-lg p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Company</h2>
-
-        {companies.length === 0 ? (
-          <p className="text-sm text-gray-600">
-            No companies found. (You should have one from onboarding.)
-          </p>
-        ) : (
           <div className="flex flex-wrap items-center gap-3">
             <select
-              className="border rounded px-3 py-2"
+              className="border border-soft rounded px-3 py-2 text-sm"
               value={selectedCompanyId}
               onChange={(e) => setSelectedCompanyId(e.target.value)}
             >
@@ -186,99 +194,120 @@ export default function FounderDashboardPage() {
               ))}
             </select>
 
-
-
             {selectedCompany && (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted">
                 {selectedCompany.industry ? `${selectedCompany.industry} · ` : ""}
                 {selectedCompany.website ?? ""}
               </div>
             )}
-
-            {selectedCompanyId ? (
-              <div className="pt-2 flex gap-4">
-                <Link
-                  href={`/dashboard/founder/company/${selectedCompanyId}/kyb`}
-                  className="text-sm font-medium underline"
-                >
-                  Manage KYB / Owners
-                </Link>
-
-                <Link
-                  href={`/dashboard/founder/company/${selectedCompanyId}/cap-table`}
-                  className="text-sm font-medium underline"
-                >
-                  View Cap Table
-                </Link>
-              </div>
-            ) : null}
-
-          </div>
-        )}
-      </section>
-
-      <section className="bg-white border rounded-lg p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Create an Opportunity</h2>
-
-        <form onSubmit={createOpportunity} className="space-y-4">
-          <Field label="Title" value={title} setValue={setTitle} required />
-
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">Description *</span>
-            <textarea
-              className="w-full border rounded px-3 py-2 min-h-[120px]"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
-          </label>
-
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Field label="Equity type" value={equityType} setValue={setEquityType} />
-            <Field label="Equity amount" value={equityAmount} setValue={setEquityAmount} />
-            <Field label="Equity unit" value={equityUnit} setValue={setEquityUnit} />
           </div>
 
-          <button className="bg-black text-white rounded px-4 py-2 font-medium">
-            Create Opportunity
-          </button>
-        </form>
-      </section>
+          {selectedCompanyId && (
+            <div className="flex gap-4 pt-2">
+              <Link
+                href={`/dashboard/founder/company/${selectedCompanyId}/kyb`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Manage KYB / Owners
+              </Link>
+              <Link
+                href={`/dashboard/founder/company/${selectedCompanyId}/cap-table`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                View Cap Table
+              </Link>
+            </div>
+          )}
+        </section>
 
-      <section className="bg-white border rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your Opportunities</h2>
-          <span className="text-sm text-gray-600">{opps.length} total</span>
-        </div>
+        {/* Create Opportunity */}
+        <section className="rounded-xl border border-primary/20 bg-white p-6 space-y-5">
+          <h2 className="text-lg font-semibold text-primary">
+            Create a New Opportunity
+          </h2>
 
-        {opps.length === 0 ? (
-          <p className="text-sm text-gray-600">No opportunities yet. Create one above.</p>
-        ) : (
-          <div className="divide-y">
-            {opps.map((o) => (
-              <div key={o.id} className="py-4 flex items-start justify-between gap-6">
-                <div className="space-y-1">
-                  <div className="font-semibold">{o.title}</div>
-                  <div className="text-sm text-gray-600">
-                    Status: {o.status}
-                    {o.equity_amount !== null && o.equity_unit
-                      ? ` · Equity: ${o.equity_amount} ${o.equity_unit}`
-                      : ""}
-                    {o.equity_type ? ` · Type: ${o.equity_type}` : ""}
+          <form onSubmit={createOpportunity} className="space-y-4">
+            <Field label="Title" value={title} setValue={setTitle} required />
+
+            <label className="block space-y-1">
+              <span className="text-sm font-medium text-text">
+                Description <span className="text-red-600">*</span>
+              </span>
+              <textarea
+                className="w-full border border-soft rounded px-3 py-2 min-h-[120px]"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              />
+            </label>
+
+            <div className="grid sm:grid-cols-3 gap-4">
+              <Field label="Equity type" value={equityType} setValue={setEquityType} />
+              <Field label="Equity amount" value={equityAmount} setValue={setEquityAmount} />
+              <Field label="Equity unit" value={equityUnit} setValue={setEquityUnit} />
+            </div>
+
+            <button className="rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90">
+              Create Opportunity
+            </button>
+          </form>
+        </section>
+
+        {/* Opportunities */}
+        <section className="rounded-lg border border-soft bg-white p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-text">
+              Your Opportunities
+            </h2>
+            <span className="text-sm text-muted">{opps.length} total</span>
+          </div>
+
+          {opps.length === 0 ? (
+            <p className="text-sm text-muted">
+              No opportunities yet. Create one above.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {opps.map((o) => (
+                <div
+                  key={o.id}
+                  className="py-4 flex items-start justify-between gap-6 transition hover:bg-soft/40 rounded-md px-2 -mx-2"
+                >
+                  <div className="space-y-1">
+                    <div className="font-medium text-text">
+                      {o.title}
+                    </div>
+                    <div className="text-sm text-muted">
+                      {o.equity_amount !== null && o.equity_unit
+                        ? `Equity: ${o.equity_amount} ${o.equity_unit}`
+                        : "Equity not specified"}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                        o.status === "open"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {o.status}
+                    </span>
+
+                    <Link
+                      href={`/dashboard/founder/opportunity/${o.id}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      Manage
+                    </Link>
                   </div>
                 </div>
-
-                <Link
-                  href={`/dashboard/founder/opportunity/${o.id}`}
-                  className="text-sm font-medium underline"
-                >
-                  Manage
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }
@@ -296,11 +325,11 @@ function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-sm font-medium">
+      <span className="text-sm font-medium text-text">
         {label} {required ? <span className="text-red-600">*</span> : null}
       </span>
       <input
-        className="w-full border rounded px-3 py-2"
+        className="w-full border border-soft rounded px-3 py-2"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         required={required}

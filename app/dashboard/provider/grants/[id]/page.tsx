@@ -115,21 +115,21 @@ export default function ProviderGrantDetailPage() {
   const canSign = grant.status === "sent" && Boolean(grant.agreement_url)
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-10 space-y-8">
+    <div className="max-w-xl mx-auto px-6 py-10 space-y-10">
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-xl font-semibold text-text">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-text">
             Equity Agreement
           </h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="text-sm text-muted">
             Grant #{String(grant.id).slice(0, 8)}
             {company?.name ? ` · ${company.name}` : ""}
             {company?.industry ? ` · ${company.industry}` : ""}
           </p>
         </div>
 
-        <Link className="text-sm underline" href="/dashboard/provider">
+        <Link className="text-sm font-medium text-text hover:underline" href="/dashboard/provider">
           Back
         </Link>
       </div>
@@ -142,12 +142,12 @@ export default function ProviderGrantDetailPage() {
 
       {/* Equity Details */}
       <section className="rounded-lg border border-soft bg-white p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-text">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           Equity Allocation
         </h2>
 
         <div className="rounded-md bg-accentSoft p-4">
-          <div className="text-2xl font-semibold text-primary">
+          <div className="text-3xl font-semibold text-primary">
             {grant.equity_amount ?? "?"}{grant.equity_unit ? "%" : ""}
           </div>
           <p className="mt-1 text-sm text-text">
@@ -163,18 +163,18 @@ export default function ProviderGrantDetailPage() {
       </section>
 
       {/* Agreement */}
-      <section className="rounded-lg border border-soft bg-white p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-text">
+      <section className="rounded-lg border border-soft bg-white p-6 space-y-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           Agreement
         </h2>
 
         {grant.agreement_url ? (
           <a
-            className="underline text-sm"
+            className="inline-block text-sm font-medium text-primary hover:underline"
             href={grant.agreement_url}
             target="_blank"
           >
-            Open agreement
+            Open agreement document
           </a>
         ) : (
           <p className="text-sm text-muted">
@@ -182,29 +182,34 @@ export default function ProviderGrantDetailPage() {
           </p>
         )}
 
-        <button
-          onClick={markSigned}
-          disabled={!canSign || signing}
-          className="
-            rounded-md
-            bg-primary
-            px-4 py-2
-            text-sm font-medium text-white
-            hover:opacity-90
-            disabled:cursor-not-allowed
-            disabled:opacity-50
-          "
-          title={!canSign ? "You can only sign after the agreement is sent." : undefined}
-        >
-          {grant.status === "signed"
-            ? "Signed"
-            : signing
-            ? "Signing…"
-            : "Sign Agreement"}
-        </button>
+        <div className="pt-4 border-t border-soft">
+          <button
+            onClick={markSigned}
+            disabled={!canSign || signing}
+            className={`w-full sm:w-auto rounded-md px-6 py-3 text-sm font-semibold transition
+              ${
+                canSign
+                  ? "bg-primary text-white hover:opacity-90"
+                  : "bg-soft text-muted cursor-not-allowed"
+              }`}
+            title={!canSign ? "You can only sign after the agreement is sent." : undefined}
+          >
+            {grant.status === "signed"
+              ? "Signed"
+              : signing
+              ? "Signing…"
+              : "Sign Agreement"}
+          </button>
+
+          {!canSign && (
+            <p className="mt-2 text-xs text-muted">
+              You can sign once the agreement has been sent.
+            </p>
+          )}
+        </div>
 
         <p className="text-xs text-muted">
-          Signing is final and cannot be undone.
+          MVP note: Signing is currently recorded as an attestation. Final versions will be signed via an integrated agreement provider.
         </p>
       </section>
     </div>
